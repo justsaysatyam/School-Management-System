@@ -8,7 +8,6 @@ from .models import (
 
 @admin.register(SchoolClass)
 class SchoolClassAdmin(admin.ModelAdmin):
-    #hii hello byy
     list_display = ['class_name', 'section', 'strength']
     list_filter = ['class_name']
     search_fields = ['class_name', 'section']
