@@ -5,6 +5,8 @@ Mid Point School - School Management System
 
 from pathlib import Path
 import os
+import dj_database_url
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -59,23 +61,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'school_management.wsgi.application'
 
-import dj_database_url
-
 # Database
-
 IS_VERCEL = "VERCEL" in os.environ
 
-# Vercel Postgres provides the database URL in POSTGRES_URL
 db_url = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRES_URL')
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        env=None if db_url is None else 'DATABASE_URL' if os.environ.get('DATABASE_URL') else 'POSTGRES_URL',
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+if db_url:
+    DATABASES = {
+        'default': dj_database_url.parse(db_url, conn_max_age=600, conn_health_checks=True)
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
 
 
 if IS_VERCEL and DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
