@@ -81,9 +81,13 @@ else:
 
 
 if IS_VERCEL and DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
-    # Allow read-only for static site generation if needed, but for runtime it will fail.
-    # We can leave it, but this confirms the problem is the missing DATABASE_URL.
-    pass
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "Missing hosted database configuration for Vercel deployment. "
+        "SQLite is not supported in Vercel's read-only filesystem. "
+        "Please set up Vercel Postgres in the 'Storage' tab of your project and redeploy."
+    )
+
 
 
 
