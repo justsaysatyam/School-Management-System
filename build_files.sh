@@ -1,17 +1,18 @@
-set -e
+set -ex
 echo "------------ BUILD START ------------"
 
-echo "Checking Python version..."
-python --version
+echo "Checking environment..."
+env | grep -E 'VERCEL|CI|PYTHON' || true
 
-echo "Upgrading pip..."
-python -m pip install --upgrade pip
+echo "Checking Python..."
+which python3
+python3 --version
 
 echo "Installing requirements..."
-python -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 
 echo "Running collectstatic..."
-python manage.py collectstatic --noinput --clear
+python3 manage.py collectstatic --noinput --clear
 
 echo "------------ BUILD END ------------"
 
