@@ -4,7 +4,7 @@
     "outputDirectory": "staticfiles_build",
     "functions": {
         "school_management/wsgi.py": {
-            "runtime": "python3.12"
+            "runtime": "@vercel/python"
         }
     },
     "rewrites": [
