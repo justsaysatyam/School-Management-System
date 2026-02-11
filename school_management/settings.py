@@ -70,7 +70,8 @@ IS_VERCEL = "VERCEL" in os.environ
 db_url = (
     os.environ.get('POSTGRES_URL_NON_POOLING') or 
     os.environ.get('POSTGRES_URL') or 
-    os.environ.get('DATABASE_URL')
+    os.environ.get('DATABASE_URL') or
+    os.environ.get('POSTGRES_PRISMA_URL')
 )
 
 if db_url:
@@ -78,29 +79,48 @@ if db_url:
         'default': dj_database_url.parse(db_url, conn_max_age=600, conn_health_checks=True)
     }
 else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+    # If no URL, try individual parts if they exist (Vercel sometimes provides these)
+    if all(k in os.environ for k in ['POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_HOST']):
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.environ.get('POSTGRES_DB'),
+                'USER': os.environ.get('POSTGRES_USER'),
+                'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
+                'HOST': os.environ.get('POSTGRES_HOST'),
+                'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            }
         }
-    }
+    else:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 
 # Safety check for Vercel deployment
 if IS_VERCEL and DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+    # Diagnostic: Print available relevant env keys (masked values for security)
+    relevant_keys = [k for k in os.environ.keys() if any(x in k for x in ['POSTGRES', 'DATABASE', 'URL', 'VERCEL'])]
+    print(f"DIAGNOSTIC - Available environment keys: {relevant_keys}")
+    
     # Allow build-time commands to pass (e.g., collectstatic)
-    # We check sys.argv to see if it's a build command
     BUILD_COMMANDS = ['collectstatic', 'generate']
     if not any(cmd in sys.argv for cmd in BUILD_COMMANDS):
         from django.core.exceptions import ImproperlyConfigured
-        raise ImproperlyConfigured(
+        error_msg = (
             "Vercel Deployment Error: Missing hosted database configuration.\n"
             "SQLite is not supported on Vercel's read-only filesystem.\n"
+            "Available Relevant Env Keys: " + str(relevant_keys) + "\n\n"
             "Please follow these steps:\n"
             "1. Go to your project on the Vercel Dashboard.\n"
             "2. Navigate to the 'Storage' tab.\n"
             "3. Create/Connect a 'Vercel Postgres' database.\n"
-            "4. Redeploy your project to inject the environment variables."
+            "4. Ensure it is connected to the environment you are deploying to (e.g., Production/Preview).\n"
+            "5. Redeploy your project to inject the environment variables."
         )
+        raise ImproperlyConfigured(error_msg)
 
 
 
