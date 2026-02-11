@@ -5,6 +5,7 @@ Mid Point School - School Management System
 
 from pathlib import Path
 import os
+import sys
 import dj_database_url
 
 
