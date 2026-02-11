@@ -2,11 +2,6 @@
     "version": 2,
     "buildCommand": "./build_files.sh",
     "outputDirectory": "staticfiles_build",
-    "functions": {
-        "school_management/wsgi.py": {
-            "runtime": "@vercel/python"
-        }
-    },
     "rewrites": [
         {
             "source": "/static/(.*)",
