@@ -1,19 +1,18 @@
 set -ex
 echo "------------ BUILD START ------------"
 
-echo "Checking environment..."
-env | grep -E 'VERCEL|CI|PYTHON' || true
+# Ensure output directory exists
+mkdir -p staticfiles_build
 
-echo "Checking Python..."
-which python3
-python3 --version
+echo "Checking environment..."
+python3 --version || python --version
 
 echo "Installing requirements..."
+# Use python3 -m pip for reliability
 python3 -m pip install -r requirements.txt
 
 echo "Running collectstatic..."
+# Use python3 manage.py for reliability
 python3 manage.py collectstatic --noinput --clear
 
 echo "------------ BUILD END ------------"
-
-

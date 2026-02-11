@@ -121,11 +121,14 @@ if IS_VERCEL:
     IS_BUILDING = any(cmd in sys.argv for cmd in ['collectstatic', 'generate', 'makemigrations', 'migrate']) or os.environ.get('CI') == '1'
     
     if IS_BUILDING:
-        print("DIAGNOSTIC - Build phase detected. Using in-memory database.")
+        print("DIAGNOSTIC - Build phase detected (Vercel). Using in-memory database.")
         DATABASES['default'] = {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': ':memory:',
         }
+        # Disable white noise during build to avoid path checks
+        if 'whitenoise.middleware.WhiteNoiseMiddleware' in MIDDLEWARE:
+            MIDDLEWARE.remove('whitenoise.middleware.WhiteNoiseMiddleware')
     elif DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3' and v_env != 'unknown':
         from django.core.exceptions import ImproperlyConfigured
         
@@ -167,7 +170,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')
+# Align STATIC_ROOT with Vercel's outputDirectory
+if os.environ.get('VERCEL'):
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build')
+else:
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Media files (Uploads)
 MEDIA_URL = '/media/'
