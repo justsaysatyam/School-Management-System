@@ -62,7 +62,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'school_management.wsgi.application'
 
 # Database
-IS_VERCEL = "VERCEL" in os.environ
+IS_VERCEL = "VERCEL" in os.environ or os.path.exists('/var/task')
 
 db_url = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRES_URL')
 
