@@ -121,8 +121,10 @@ if IS_VERCEL and DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
     print(f"DIAGNOSTIC - User defined keys: {user_keys}")
     
     # Allow build-time commands to pass (e.g., collectstatic)
-    BUILD_COMMANDS = ['collectstatic', 'generate']
-    if not any(cmd in sys.argv for cmd in BUILD_COMMANDS):
+    # We also check for CI environment variable which Vercel sets during build
+    IS_BUILDING = any(cmd in sys.argv for cmd in ['collectstatic', 'generate', 'makemigrations', 'migrate']) or os.environ.get('CI') == '1'
+    
+    if not IS_BUILDING and v_env != 'unknown':
         from django.core.exceptions import ImproperlyConfigured
         error_msg = (
             f"Vercel Deployment Error: No database variables found.\n"
