@@ -100,7 +100,7 @@ else:
         }
 
 # Safety check for Vercel deployment
-if IS_VERCEL and DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+if IS_VERCEL:
     # Diagnostic info
     v_env = os.environ.get('VERCEL_ENV', 'unknown')
     v_branch = os.environ.get('VERCEL_GIT_COMMIT_REF', 'unknown')
@@ -108,33 +108,35 @@ if IS_VERCEL and DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
     # Check for a dummy test variable to see if integration is working at all
     foo_test = os.environ.get('FOO', 'NOT FOUND')
     
-    # Check for ANY key containing "POSTGRES" or "DATABASE" even if it doesn't meet my startswith filter
-    db_candidate_keys = [k for k in os.environ.keys() if 'POSTGRES' in k.upper() or 'DATABASE' in k.upper()]
-    
-    # All non-internal keys
-    all_keys = sorted(os.environ.keys())
-    user_keys = [k for k in all_keys if not k.startswith(('VERCEL_', 'AWS_', 'LAMBDA_', '_', 'PATH', 'PWD', 'HOME', 'LANG'))]
-    
+    # Diagnostic logging
     print(f"DIAGNOSTIC - Env: {v_env}, Branch: {v_branch}")
     print(f"DIAGNOSTIC - FOO test: {foo_test}")
-    print(f"DIAGNOSTIC - Database candidate keys: {db_candidate_keys}")
-    print(f"DIAGNOSTIC - User defined keys: {user_keys}")
     
     # Allow build-time commands to pass (e.g., collectstatic)
-    # We also check for CI environment variable which Vercel sets during build
+    # We force an in-memory database during build so Django doesn't fail on connection checks
     IS_BUILDING = any(cmd in sys.argv for cmd in ['collectstatic', 'generate', 'makemigrations', 'migrate']) or os.environ.get('CI') == '1'
     
-    if not IS_BUILDING and v_env != 'unknown':
+    if IS_BUILDING:
+        print("DIAGNOSTIC - Build phase detected. Using in-memory database.")
+        DATABASES['default'] = {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    elif DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3' and v_env != 'unknown':
         from django.core.exceptions import ImproperlyConfigured
+        
+        # More diagnostics before raising
+        db_candidate_keys = [k for k in os.environ.keys() if 'POSTGRES' in k.upper() or 'DATABASE' in k.upper()]
+        user_keys = [k for k in os.environ.keys() if not k.startswith(('VERCEL_', 'AWS_', 'LAMBDA_', '_', 'PATH', 'PWD', 'HOME', 'LANG'))]
+        
         error_msg = (
             f"Vercel Deployment Error: No database variables found.\n"
             f"Current Vercel Environment: {v_env}\n"
             f"FOO Test Variable: {foo_test}\n"
             f"Potential DB Keys Found: {db_candidate_keys}\n\n"
-            "If 'FOO Test' is 'NOT FOUND', Vercel is blocking ALL your environment variables.\n"
+            "Vercel modern platform detected but no database variable injected.\n"
             "Please go to your Vercel Project -> Settings -> Environment Variables and manually add:\n"
-            "1. Key: FOO, Value: BAR\n"
-            "2. Key: DATABASE_URL, Value: (Your Postgres URL from Storage tab)\n"
+            "1. Key: DATABASE_URL, Value: (Your Postgres URL from Storage tab)\n"
             "Ensure 'Production' and 'Preview' are both checked."
         )
         raise ImproperlyConfigured(error_msg)
