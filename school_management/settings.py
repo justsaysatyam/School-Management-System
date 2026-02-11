@@ -63,13 +63,26 @@ import dj_database_url
 
 # Database
 
+IS_VERCEL = "VERCEL" in os.environ
+
+# Vercel Postgres provides the database URL in POSTGRES_URL
+db_url = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRES_URL')
+
 DATABASES = {
     'default': dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        env=None if db_url is None else 'DATABASE_URL' if os.environ.get('DATABASE_URL') else 'POSTGRES_URL',
         conn_max_age=600,
         conn_health_checks=True,
     )
 }
+
+
+if IS_VERCEL and DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+    # Allow read-only for static site generation if needed, but for runtime it will fail.
+    # We can leave it, but this confirms the problem is the missing DATABASE_URL.
+    pass
+
 
 
 # Password validation
