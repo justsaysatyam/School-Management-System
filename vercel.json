@@ -4,7 +4,6 @@
     "outputDirectory": "staticfiles_build",
     "functions": {
         "school_management/wsgi.py": {
-            "maxLambdaSize": "15mb",
             "runtime": "python3.12"
         }
     },
