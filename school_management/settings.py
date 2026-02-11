@@ -65,7 +65,13 @@ WSGI_APPLICATION = 'school_management.wsgi.application'
 # Database
 IS_VERCEL = "VERCEL" in os.environ
 
-db_url = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRES_URL')
+# Check for various Vercel-specific environment variables
+# POSTGRES_URL is often pooled, POSTGRES_URL_NON_POOLING is direct
+db_url = (
+    os.environ.get('POSTGRES_URL_NON_POOLING') or 
+    os.environ.get('POSTGRES_URL') or 
+    os.environ.get('DATABASE_URL')
+)
 
 if db_url:
     DATABASES = {
@@ -79,17 +85,21 @@ else:
         }
     }
 
-
-
+# Safety check for Vercel deployment
 if IS_VERCEL and DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
-    import sys
-    # Allow collectstatic and other build-time commands to pass
-    if 'collectstatic' not in sys.argv and 'generate' not in sys.argv:
+    # Allow build-time commands to pass (e.g., collectstatic)
+    # We check sys.argv to see if it's a build command
+    BUILD_COMMANDS = ['collectstatic', 'generate']
+    if not any(cmd in sys.argv for cmd in BUILD_COMMANDS):
         from django.core.exceptions import ImproperlyConfigured
         raise ImproperlyConfigured(
-            "Missing hosted database configuration for Vercel deployment. "
-            "SQLite is not supported in Vercel's read-only filesystem. "
-            "Please set up Vercel Postgres in the 'Storage' tab of your project and redeploy."
+            "Vercel Deployment Error: Missing hosted database configuration.\n"
+            "SQLite is not supported on Vercel's read-only filesystem.\n"
+            "Please follow these steps:\n"
+            "1. Go to your project on the Vercel Dashboard.\n"
+            "2. Navigate to the 'Storage' tab.\n"
+            "3. Create/Connect a 'Vercel Postgres' database.\n"
+            "4. Redeploy your project to inject the environment variables."
         )
 
 
